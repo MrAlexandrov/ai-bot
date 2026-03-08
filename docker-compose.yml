@@ -25,10 +25,12 @@ services:
     volumes:
       - openclaw_data:/data
       - ./openclaw/config.json:/data/config/openclaw.json:ro
+      - ./workspace:/data/workspace   # файлы агента доступны с хоста
     ports:
       - "3000:3000"
     environment:
       - OPENCLAW_TELEGRAM_DISABLE_AUTO_SELECT_FAMILY=true
+      - TELEGRAM_BOT_TOKEN=${OPENCLAW_TELEGRAM_TOKEN}
     depends_on:
       ollama:
         condition: service_healthy

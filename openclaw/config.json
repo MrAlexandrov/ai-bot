@@ -16,10 +16,14 @@
       }
     }
   },
+  "agents": {
+    "default": {
+      "model": "ollama/qwen2.5:7b"
+    }
+  },
   "channels": {
     "telegram": {
-      "enabled": false,
-      "botToken": ""
+      "enabled": true
     }
   }
 }
