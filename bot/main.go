@@ -29,7 +29,9 @@ func main() {
 		os.Exit(1)
 	}
 
-	h := handlers.New(cfg.BackendURL)
+	h := handlers.New(cfg.BackendURL, cfg.RootID)
+
+	bot.Use(h.Auth)
 
 	bot.Handle("/start", h.Start)
 	bot.Handle("/help", h.Help)

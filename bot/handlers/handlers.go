@@ -30,16 +30,29 @@ type backendResponse struct {
 type Handler struct {
 	backendURL string
 	httpClient *http.Client
+	rootID     int64
 
 	mu       sync.RWMutex
 	sessions map[int64][]message // per-user conversation history
 }
 
-func New(backendURL string) *Handler {
+func New(backendURL string, rootID int64) *Handler {
 	return &Handler{
 		backendURL: backendURL,
 		httpClient: &http.Client{Timeout: 10 * time.Minute},
+		rootID:     rootID,
 		sessions:   make(map[int64][]message),
+	}
+}
+
+// Auth — middleware, пропускает только ROOT_ID.
+func (h *Handler) Auth(next tele.HandlerFunc) tele.HandlerFunc {
+	return func(c tele.Context) error {
+		if c.Sender().ID != h.rootID {
+			slog.Warn("unauthorized access", "user_id", c.Sender().ID, "username", c.Sender().Username)
+			return nil // молча игнорируем
+		}
+		return next(c)
 	}
 }
 
