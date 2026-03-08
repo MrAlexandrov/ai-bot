@@ -23,9 +23,9 @@ services:
     image: ghcr.io/openclaw/openclaw:latest
     container_name: openclaw
     volumes:
-      - openclaw_data:/data
-      - ./openclaw/config.json:/data/config/openclaw.json:ro
-      - ./workspace:/data/workspace   # файлы агента доступны с хоста
+      - openclaw_data:/home/node/.openclaw
+      - ./openclaw/config.json:/home/node/.openclaw/openclaw.json
+      - ./workspace:/home/node/.openclaw/workspace   # файлы агента доступны с хоста
     ports:
       - "3000:3000"
     environment:
