@@ -42,7 +42,7 @@ func (h *ChatHandler) Chat(w http.ResponseWriter, r *http.Request) {
 
 	resp, err := h.ollama.Chat(r.Context(), h.model, messages)
 	if err != nil {
-		slog.Error("ollama chat", "err", err)
+		slog.ErrorContext(r.Context(), "ollama chat", "err", err)
 		http.Error(w, "model unavailable", http.StatusServiceUnavailable)
 		return
 	}
@@ -54,7 +54,7 @@ func (h *ChatHandler) Chat(w http.ResponseWriter, r *http.Request) {
 func (h *ChatHandler) Models(w http.ResponseWriter, r *http.Request) {
 	models, err := h.ollama.ListModels(r.Context())
 	if err != nil {
-		slog.Error("list models", "err", err)
+		slog.ErrorContext(r.Context(), "list models", "err", err)
 		http.Error(w, "model unavailable", http.StatusServiceUnavailable)
 		return
 	}

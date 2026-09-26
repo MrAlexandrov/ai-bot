@@ -1,4 +1,4 @@
-.PHONY: setup up down build pull logs restart shell-ollama
+.PHONY: setup up down build pull logs restart shell-ollama configure-openclaw
 
 # Подготовка: копируем .env и скачиваем зависимости Go
 setup:
@@ -53,3 +53,15 @@ models:
 # Статус всех контейнеров
 status:
 	docker compose ps
+
+# Настроить OpenClaw на использование Ollama (запускать после make up)
+configure-openclaw:
+	@MODEL=$$(grep OLLAMA_MODEL .env 2>/dev/null | cut -d= -f2 | tr -d ' '); \
+	MODEL=$${MODEL:-qwen2.5:7b}; \
+	echo "Настраиваем OpenClaw → Ollama ($$MODEL)..."; \
+	docker exec openclaw openclaw config patch \
+	  "{\"models\":{\"providers\":{\"ollama\":{\"baseUrl\":\"http://ollama:11434/v1\",\"apiKey\":\"ollama-local\",\"api\":\"openai-responses\",\"models\":[{\"id\":\"$$MODEL\",\"name\":\"$$MODEL\",\"contextWindow\":32768,\"maxOutput\":8192}]}}}}"; \
+	docker exec openclaw openclaw config patch \
+	  "{\"agents\":{\"default\":{\"model\":\"ollama/$$MODEL\"}},\"channels\":{\"telegram\":{\"groupPolicy\":\"allowlist\"}}}"; \
+	echo "Перезапускаем OpenClaw..."; \
+	docker compose restart openclaw

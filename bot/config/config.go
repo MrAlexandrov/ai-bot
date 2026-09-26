@@ -7,9 +7,10 @@ import (
 )
 
 type Config struct {
-	TelegramToken string
-	BackendURL    string
-	RootID        int64
+	TelegramToken    string
+	TelegramLocalAPI string
+	BackendURL       string
+	RootID           int64
 }
 
 func Load() (*Config, error) {
@@ -28,9 +29,10 @@ func Load() (*Config, error) {
 	}
 
 	return &Config{
-		TelegramToken: token,
-		BackendURL:    getEnv("BACKEND_URL", "http://backend:8080"),
-		RootID:        rootID,
+		TelegramToken:    token,
+		TelegramLocalAPI: getEnv("TELEGRAM_LOCAL_API_URL", ""),
+		BackendURL:       getEnv("BACKEND_URL", "http://backend:8080"),
+		RootID:           rootID,
 	}, nil
 }
 

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"log/slog"
 	"net/http"
 	"os"
@@ -11,10 +12,14 @@ import (
 	"github.com/mrralexandrov/ai-bot/backend/config"
 	"github.com/mrralexandrov/ai-bot/backend/handlers"
 	"github.com/mrralexandrov/ai-bot/backend/ollama"
+	"github.com/mrralexandrov/ai-bot/logx"
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 )
 
 func main() {
-	slog.SetDefault(slog.New(slog.NewJSONHandler(os.Stdout, nil)))
+	logx.Setup("ai-bot-backend")
+	shutdown := logx.Init(context.Background(), "ai-bot-backend")
+	defer shutdown(context.Background())
 
 	cfg := config.Load()
 	client := ollama.NewClient(cfg.OllamaURL)
@@ -29,7 +34,7 @@ func main() {
 	r.Get("/models", chat.Models)
 
 	slog.Info("backend started", "port", cfg.Port, "model", cfg.OllamaModel)
-	if err := http.ListenAndServe(":"+cfg.Port, r); err != nil {
+	if err := http.ListenAndServe(":"+cfg.Port, otelhttp.NewHandler(r, "http.server")); err != nil {
 		slog.Error("server failed", "err", err)
 		os.Exit(1)
 	}

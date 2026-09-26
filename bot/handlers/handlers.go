@@ -10,8 +10,14 @@ import (
 	"sync"
 	"time"
 
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/trace"
+
 	tele "gopkg.in/telebot.v3"
 )
+
+const updateContextKey = "otel-update-context"
 
 type message struct {
 	Role    string `json:"role"`
@@ -39,7 +45,7 @@ type Handler struct {
 func New(backendURL string, rootID int64) *Handler {
 	return &Handler{
 		backendURL: backendURL,
-		httpClient: &http.Client{Timeout: 10 * time.Minute},
+		httpClient: &http.Client{Timeout: 10 * time.Minute, Transport: otelhttp.NewTransport(http.DefaultTransport)},
 		rootID:     rootID,
 		sessions:   make(map[int64][]message),
 	}
@@ -48,8 +54,12 @@ func New(backendURL string, rootID int64) *Handler {
 // Auth — middleware, пропускает только ROOT_ID.
 func (h *Handler) Auth(next tele.HandlerFunc) tele.HandlerFunc {
 	return func(c tele.Context) error {
+		ctx, span := otel.Tracer("ai-bot").Start(context.Background(), "telegram.update", trace.WithSpanKind(trace.SpanKindServer))
+		defer span.End()
+		c.Set(updateContextKey, ctx)
+		defer c.Set(updateContextKey, nil)
 		if c.Sender().ID != h.rootID {
-			slog.Warn("unauthorized access", "user_id", c.Sender().ID, "username", c.Sender().Username)
+			slog.WarnContext(updateContext(c), "unauthorized access", "user_id", c.Sender().ID, "username", c.Sender().Username)
 			return nil // молча игнорируем
 		}
 		return next(c)
@@ -92,12 +102,12 @@ func (h *Handler) Message(c tele.Context) error {
 
 	_ = c.Notify(tele.Typing)
 
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Minute)
+	ctx, cancel := context.WithTimeout(updateContext(c), 10*time.Minute)
 	defer cancel()
 
 	reply, err := h.callBackend(ctx, text, hist)
 	if err != nil {
-		slog.Error("backend call failed", "err", err, "user_id", userID)
+		slog.ErrorContext(updateContext(c), "backend call failed", "err", err, "user_id", userID)
 		return c.Send("Не удалось получить ответ от модели. Попробуй позже.")
 	}
 
@@ -113,6 +123,13 @@ func (h *Handler) Message(c tele.Context) error {
 	h.mu.Unlock()
 
 	return c.Send(reply)
+}
+
+func updateContext(c tele.Context) context.Context {
+	if ctx, ok := c.Get(updateContextKey).(context.Context); ok {
+		return ctx
+	}
+	return context.Background()
 }
 
 func (h *Handler) callBackend(ctx context.Context, text string, history []message) (string, error) {

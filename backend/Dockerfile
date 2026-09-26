@@ -1,19 +1,22 @@
 FROM golang:1.22-alpine AS builder
 
-WORKDIR /app
+WORKDIR /src
 
-COPY go.mod ./
-ENV GONOSUMDB=*
+COPY logx/go.mod logx/
+COPY backend/go.mod backend/
+
 ENV GOFLAGS=-mod=mod
-RUN go mod download
+RUN cd backend && go mod download
 
-COPY . .
-RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-s -w" -o backend .
+COPY logx/ logx/
+COPY backend/ backend/
+
+RUN cd backend && CGO_ENABLED=0 GOOS=linux go build -ldflags="-s -w" -o /out/backend .
 
 FROM alpine:3.19
 RUN apk --no-cache add ca-certificates wget
 WORKDIR /app
-COPY --from=builder /app/backend .
+COPY --from=builder /out/backend .
 
 EXPOSE 8080
 CMD ["./backend"]

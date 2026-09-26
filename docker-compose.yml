@@ -9,6 +9,7 @@ services:
     environment:
       - OLLAMA_NUM_PARALLEL=2
       - OLLAMA_MAX_LOADED_MODELS=1
+      - OLLAMA_HOST=0.0.0.0
     restart: unless-stopped
     networks:
       - ai-net
@@ -23,14 +24,15 @@ services:
     image: ghcr.io/openclaw/openclaw:latest
     container_name: openclaw
     volumes:
-      - openclaw_data:/home/node/.openclaw
-      - ./openclaw/config.json:/home/node/.openclaw/openclaw.json
-      - ./workspace:/home/node/.openclaw/workspace   # файлы агента доступны с хоста
+      - ./openclaw_data:/home/node/.openclaw:rw
+      - ./workspace:/home/node/.openclaw/workspace:rw   # файлы агента доступны с хоста
     ports:
       - "3000:3000"
     environment:
       - OPENCLAW_TELEGRAM_DISABLE_AUTO_SELECT_FAMILY=true
       - TELEGRAM_BOT_TOKEN=${OPENCLAW_TELEGRAM_TOKEN}
+      - OLLAMA_API_KEY="ollama-local"
+      - OLLAMA_BASE_URL=http://ollama:11434    # <-- Добавлено: направляем запросы в соседний контейнер
     depends_on:
       ollama:
         condition: service_healthy
@@ -40,8 +42,8 @@ services:
 
   backend:
     build:
-      context: ./backend
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: backend/Dockerfile
     container_name: ai-backend
     environment:
       - PORT=8080
@@ -64,23 +66,27 @@ services:
 
   bot:
     build:
-      context: ./bot
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: bot/Dockerfile
     container_name: ai-telegram-bot
     environment:
       - TELEGRAM_TOKEN=${TELEGRAM_TOKEN}
       - BACKEND_URL=http://backend:8080
       - ROOT_ID=${ROOT_ID}
+      - TELEGRAM_LOCAL_API_URL=http://telegram-bot-api:8081
     depends_on:
       backend:
         condition: service_healthy
     restart: unless-stopped
     networks:
       - ai-net
+      - telegram-net
 
 networks:
   ai-net:
     driver: bridge
+  telegram-net:
+    external: true
 
 volumes:
   ollama_data:

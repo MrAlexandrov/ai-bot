@@ -9,19 +9,21 @@ import (
 
 	"github.com/mrralexandrov/ai-bot/bot/config"
 	"github.com/mrralexandrov/ai-bot/bot/handlers"
+	"github.com/mrralexandrov/ai-bot/logx"
 )
 
 func main() {
-	slog.SetDefault(slog.New(slog.NewJSONHandler(os.Stdout, nil)))
-
 	cfg, err := config.Load()
 	if err != nil {
 		slog.Error("config", "err", err)
 		os.Exit(1)
 	}
 
+	logx.Setup("ai-bot", cfg.TelegramToken)
+
 	bot, err := tele.NewBot(tele.Settings{
 		Token:  cfg.TelegramToken,
+		URL:    cfg.TelegramLocalAPI,
 		Poller: &tele.LongPoller{Timeout: 10 * time.Second},
 	})
 	if err != nil {
