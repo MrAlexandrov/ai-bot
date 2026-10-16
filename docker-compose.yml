@@ -1,7 +1,7 @@
 services:
   ollama:
+    container_name: "${CONTAINER_NAME_PREFIX:-}ai-bot-ollama"
     image: ollama/ollama:latest
-    container_name: ollama
     volumes:
       - ollama_data:/root/.ollama
     ports:
@@ -21,8 +21,8 @@ services:
       start_period: 15s
 
   openclaw:
+    container_name: "${CONTAINER_NAME_PREFIX:-}ai-bot-openclaw"
     image: ghcr.io/openclaw/openclaw:latest
-    container_name: openclaw
     volumes:
       - ./openclaw_data:/home/node/.openclaw:rw
       - ./workspace:/home/node/.openclaw/workspace:rw   # файлы агента доступны с хоста
@@ -41,10 +41,10 @@ services:
       - ai-net
 
   backend:
+    container_name: "${CONTAINER_NAME_PREFIX:-}ai-bot-backend"
     build:
       context: .
       dockerfile: backend/Dockerfile
-    container_name: ai-backend
     environment:
       - PORT=8080
       - OLLAMA_URL=http://ollama:11434
@@ -65,10 +65,10 @@ services:
       start_period: 10s
 
   bot:
+    container_name: "${CONTAINER_NAME_PREFIX:-}ai-bot"
     build:
       context: .
       dockerfile: bot/Dockerfile
-    container_name: ai-telegram-bot
     environment:
       - TELEGRAM_TOKEN=${TELEGRAM_TOKEN}
       - BACKEND_URL=http://backend:8080
