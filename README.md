@@ -1,4 +1,4 @@
-# telegram-bots__ai-bot
+# ai-bot
 
 ## Структура Compose
 
